@@ -1,0 +1,22 @@
+# --- maxfiy va keraksiz fayllar (GitHub'ga yuklanmaydi) ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+vapid_keys.json
+.last_index_hash
+venv/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.sql.gz
+*.tar.gz
+node_modules/
+*.zip

@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: oquv_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oquv_pass_change_me}
+      POSTGRES_DB: oquv_markaz
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oquv_user -d oquv_markaz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://oquv_user:${POSTGRES_PASSWORD:-oquv_pass_change_me}@db:5432/oquv_markaz
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_SECRET}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-12}
+      INITIAL_RAHBAR_USERNAME: ${INITIAL_RAHBAR_USERNAME:-rahbar}
+      INITIAL_RAHBAR_PASSWORD: ${INITIAL_RAHBAR_PASSWORD:-rahbar123}
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-admin123}
+      INITIAL_SECRET_PASSWORD: ${INITIAL_SECRET_PASSWORD:-maxfiy2026}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "8000:8000"
+
+  # Frontend'ni ham shu compose orqali statik fayl sifatida xizmat qilish (ixtiyoriy).
+  # ./frontend papkasiga index.html (academy_v5.html'ni shunday nomlab) joylashtiring.
+  frontend:
+    image: nginx:alpine
+    restart: always
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx-frontend.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:

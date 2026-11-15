@@ -1,0 +1,354 @@
+from typing import Optional, List, Any
+from pydantic import BaseModel
+
+
+# ---------- AUTH ----------
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+    username: str
+    role: str
+
+
+class ChangeMyCredentialsRequest(BaseModel):
+    current_password: str
+    new_login: Optional[str] = None
+    new_password: Optional[str] = None
+
+
+class ChangeAdminCredentialsRequest(BaseModel):
+    new_login: Optional[str] = None
+    new_password: Optional[str] = None
+
+
+class RecoverPasswordRequest(BaseModel):
+    secret_password: str
+    new_login: str
+    new_password: str
+
+
+class ChangeSecretPasswordRequest(BaseModel):
+    current_secret: str
+    new_secret: str
+
+
+# ---------- SETTINGS ----------
+
+class PhoneOut(BaseModel):
+    id: int
+    phone: str
+
+    class Config:
+        from_attributes = True
+
+
+class SettingsOut(BaseModel):
+    sms_template_parent: str
+    sms_template_rahbar: str
+    rahbar_phones: List[PhoneOut]
+
+
+class SMSTemplatesIn(BaseModel):
+    sms_template_parent: str
+    sms_template_rahbar: str
+
+
+class PhoneIn(BaseModel):
+    phone: str
+
+
+# ---------- SUBJECTS ----------
+
+class SubjectIn(BaseModel):
+    name: str
+
+
+class SubjectOut(BaseModel):
+    id: int
+    name: str
+    repetitor_percent: Optional[int] = None
+    school_percent: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- TEACHERS / GROUPS ----------
+
+class GroupIn(BaseModel):
+    day_type: str  # toq | juft | harkuni
+    start: str
+    end: str
+
+
+class GroupOut(BaseModel):
+    id: int
+    day_type: str
+    start_time: str
+    end_time: str
+    label: str
+
+    class Config:
+        from_attributes = True
+
+
+class TeacherIn(BaseModel):
+    subject_id: int
+    name: str
+
+
+class TeacherOut(BaseModel):
+    id: int
+    name: str
+    subject_id: int
+    subject_name: str
+    groups: List[GroupOut] = []
+    # YANGI: Hodimlar oyligi / login uchun
+    percent_override: Optional[int] = None
+    has_login: bool = False
+    login_username: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TeacherPercentIn(BaseModel):
+    percent: Optional[int] = None  # None = fan standart foiziga qaytarish
+
+
+class SubjectPercentIn(BaseModel):
+    repetitor_percent: Optional[int] = None
+    school_percent: Optional[int] = None
+
+
+class TeacherLoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class TeacherLoginOut(BaseModel):
+    has_login: bool
+    username: Optional[str] = None
+
+
+# ---------- STUDENTS ----------
+
+class StudentIn(BaseModel):
+    first_name: str
+    last_name: str
+    phone: str
+    type: str  # school | repetitor
+    class_name: Optional[str] = None
+    teacher_id: Optional[int] = None
+    group_id: Optional[int] = None
+
+
+class StudentOut(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    phone: str
+    type: str
+    class_name: Optional[str] = None
+    subject_name: Optional[str] = None
+    teacher_name: Optional[str] = None
+    group_label: Optional[str] = None
+    added_by: str
+    added_at: str
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- PAYMENTS / ULUSHLAR (allocations) ----------
+
+class AllocationIn(BaseModel):
+    teacher_id: Optional[int] = None
+    # teacher_id berilmasa, faqat ma'lumot uchun (masalan qo'lda kiritilgan,
+    # tizimda ro'yxatdan o'tmagan holat) - odatda teacher_id doim beriladi
+    teacher_name: Optional[str] = None
+    subject_name: Optional[str] = None
+    amount: int
+
+
+class AllocationOut(BaseModel):
+    id: int
+    teacher_id: Optional[int] = None
+    teacher_name: str
+    subject_name: Optional[str] = None
+    amount: int
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentIn(BaseModel):
+    student_id: int
+    month: str
+    amount: int
+    method: str = "naxt"  # naxt | click
+    # Qo'lda kiritilgan ulushlar (agar berilsa, avtomatik foiz hisoblanmaydi)
+    allocations: Optional[List[AllocationIn]] = None
+    # allocations berilmasa va bu True bo'lsa, fan/o'qituvchi foizi asosida
+    # avtomatik ulush hisoblanadi (mumkin bo'lsa)
+    auto_split: bool = True
+
+
+class PaymentEditIn(BaseModel):
+    amount: int
+    method: Optional[str] = None
+
+
+class PaymentOut(BaseModel):
+    id: int
+    student_id: Optional[int]
+    student_name: str
+    student_phone: str
+    student_type: str
+    subject_name: Optional[str] = None
+    teacher_name: Optional[str] = None
+    group_label: Optional[str] = None
+    class_name: Optional[str] = None
+    month: str
+    amount: int
+    method: str = "naxt"
+    date_str: str
+    timestamp: int
+    added_by: str
+    edited_by: Optional[str] = None
+    edited_at: Optional[str] = None
+    allocations: List[AllocationOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- RECYCLE BIN ----------
+
+class RecycleBinOut(BaseModel):
+    id: int
+    type: str
+    data: Any
+    deleted_at: int
+    deleted_by: str
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- HODIMLAR OYLIGI (Staff salary) ----------
+
+class TeacherSalaryOut(BaseModel):
+    teacher_id: int
+    teacher_name: str
+    subject_name: str
+    percent: Optional[int] = None  # amaldagi foiz (override yoki fan standarti)
+    total_allocated: int  # jami ajratilgan ulush (barcha vaqt)
+    total_paid_out: int  # jami berilgan to'lovlar (oylik/avanslar)
+    total_returned: int = 0  # v7.6: o'qituvchi markazga qaytargan summa
+    # hozir olishi kerak bo'lgan summa = total_allocated - total_paid_out + total_returned
+    # (manfiy bo'lsa - o'qituvchi markazga shuncha qarzdor)
+    owed: int
+    students_count: int
+    paid_count: int  # shu oy to'lov qilgan o'quvchilar soni
+    unpaid_count: int
+
+
+class PayoutIn(BaseModel):
+    teacher_id: int
+    amount: int
+    note: Optional[str] = None
+    kind: str = "payout"  # v7.6: 'payout' (berildi) | 'return' (qaytarildi)
+
+
+class PayoutOut(BaseModel):
+    id: int
+    teacher_id: Optional[int] = None
+    teacher_name: str
+    amount: int
+    note: Optional[str] = None
+    date_str: str
+    timestamp: int
+    paid_by: str
+    kind: str = "payout"
+
+    class Config:
+        from_attributes = True
+
+
+class LedgerEntryOut(BaseModel):
+    """v7.6: o'qituvchi hisob varag'idagi bitta qator."""
+    kind: str            # 'share' (ulush) | 'payout' (berildi) | 'return' (qaytarildi)
+    amount: int          # balansga ta'siri: + yoki -
+    balance: int         # shu yozuvdan keyingi balans
+    timestamp: int
+    date_str: str
+    title: str
+    detail: Optional[str] = None
+    ref_id: Optional[int] = None
+
+
+class TeacherLedgerOut(BaseModel):
+    teacher_id: int
+    teacher_name: str
+    total_allocated: int
+    total_paid_out: int
+    total_returned: int
+    owed: int
+    entries: List[LedgerEntryOut]  # eng yangisi birinchi
+
+
+class TeacherSalaryDetailOut(BaseModel):
+    teacher_id: int
+    teacher_name: str
+    subject_name: str
+    percent: Optional[int] = None
+    total_allocated: int
+    total_paid_out: int
+    total_returned: int = 0
+    owed: int
+    allocations: List[AllocationOut]
+    payouts: List[PayoutOut]
+
+
+class TeacherDashboardStudentOut(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    phone: str
+    group_label: Optional[str] = None
+    paid_this_month: bool
+    total_paid: int
+
+
+class TeacherDashboardOut(BaseModel):
+    teacher_name: str
+    subject_name: str
+    percent: Optional[int] = None
+    students_count: int
+    paid_count: int
+    unpaid_count: int
+    total_allocated: int
+    total_paid_out: int
+    total_returned: int = 0
+    owed: int
+    current_month: str
+    students: List[TeacherDashboardStudentOut]
+
+
+# ---------- BACKUP / RESTORE ----------
+
+class BackupOut(BaseModel):
+    subjects: List[str]
+    teachers: dict
+    students: List[dict]
+    payments: List[dict]
+    sms_template_parent: str
+    sms_template_rahbar: str
+    rahbar_phones: List[str]
+    backup_date: str
