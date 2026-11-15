@@ -98,6 +98,9 @@ def set_debt(payload: schemas.DueSetIn, current_user: models.User = Depends(auth
         raise HTTPException(status_code=400, detail="Oy noto'g'ri!")
     year = payload.year or auto_year(payload.month)
     debt = set_student_debt(db, student, payload.month, payload.debt, current_user.username, payload.note, year)
+    from ..audit import note as _an, money as _m
+    _an(f"Qarz belgiladi: {student.last_name} {student.first_name} — {payload.month} {year}: " + (f"{_m(debt)} so'm" if debt else "qarz yopildi (0)")
+        + (f", izoh: {payload.note}" if payload.note else ""), cat="pay", entity="student", entity_id=student.id)
     db.commit()
     paid = paid_for_month(db, student.id, payload.month, year)
     return schemas.DueOut(

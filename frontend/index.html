@@ -1200,7 +1200,7 @@
         }
 
         /* =====================================================================
-           v7.0 — YANGI DIZAYN QATLAMI (Pro 13.14)
+           v7.0 — YANGI DIZAYN QATLAMI (Pro 13.16)
            Bu blok eski uslublar ustidan yoziladi (override). Kompyuter uchun
            chap tomonda yon menyu (sidebar), telefon uchun esa ilova (app)
            ko'rinishidagi pastki menyu va ixcham kartochkalar ishlatiladi.
@@ -5389,6 +5389,71 @@
             .ai-card { left: 0; right: 0; bottom: 0; width: auto; max-height: 82vh; border-radius: 26px 26px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); animation: oxSheet .32s cubic-bezier(.2,.8,.2,1); }
         }
         @media print { .ai-fab, .ai-panel { display: none !important; } }
+
+        /* =========== v13.15: 🕓 OXIRGI AMALLAR =========== */
+        .au-badge { display: none; position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: #ef4444; color: #fff;
+            font-size: .72rem; font-weight: 800; line-height: 22px; text-align: center; box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(239,68,68,.45); z-index: 3; pointer-events: none; }
+        .au-badge.on { display: block; animation: auPop .35s cubic-bezier(.2,.8,.2,1); }
+        @keyframes auPop { from { transform: scale(.3); } to { transform: none; } }
+        #menuSettings, .fld-tile[onclick*="openAuditSection"], #mobileBottomNav .nb-ic { position: relative; }
+        #menuSettings > .au-badge, .fld-tile > .au-badge { top: 10px; right: 10px; min-width: 26px; height: 26px; line-height: 26px; font-size: .8rem; }
+        .fld-tile > .au-badge { right: auto; left: 10px; }
+        .au-top { background: var(--bg-card, #fff); } html[data-ui="dark"] .au-top { background: transparent; position: static; }
+        #sidebar .sb-ghead > .au-badge, #sidebar .sb-kid > .au-badge { position: static; margin-left: auto; box-shadow: none; }
+        #sidebar .sb-ghead > .au-badge.on + .sb-chev { margin-left: 6px; }
+        html[data-ui="dark"] .au-badge { box-shadow: 0 0 0 2px #0b1226, 0 4px 10px rgba(239,68,68,.45); }
+        .au-top { position: sticky; top: 0; z-index: 4; padding-bottom: 8px; background: inherit; }
+        .au-intro { font-size: .84rem; line-height: 1.45; padding: 12px 14px; border-radius: 16px; background: rgba(99,102,241,.08); margin-bottom: 12px; }
+        .au-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; margin-bottom: 10px; }
+        .au-cats::-webkit-scrollbar { display: none; }
+        .au-cats button { flex: none; padding: 8px 13px; border-radius: 99px; border: 1px solid var(--border, #e2e8f0); background: transparent; color: inherit; font-weight: 700; font-size: .82rem; cursor: pointer; }
+        .au-cats button.on { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .au-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+        .au-tools input { flex: 1 1 220px; min-width: 0; padding: 11px 14px; border-radius: 14px; border: 1.5px solid var(--border, #e2e8f0); font-size: 16px; background: transparent; color: inherit; outline: none; }
+        .au-tools select { flex: 0 1 220px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--border, #e2e8f0); background: transparent; color: inherit; font-size: .9rem; }
+        .au-selbtn { padding: 10px 14px; border-radius: 14px; border: 1.5px solid var(--border, #e2e8f0); background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
+        .au-selbar { display: none; position: sticky; top: 8px; z-index: 6; align-items: center; gap: 10px; padding: 10px 12px; margin: 8px 0; border-radius: 18px; color: #fff;
+            background: linear-gradient(135deg, #1e1b4b, #312e81); box-shadow: 0 14px 30px -12px rgba(30,27,75,.7); animation: oxPop .25s cubic-bezier(.2,.8,.2,1); }
+        .au-selbar.on { display: flex; }
+        .au-selbar b { flex: 1; } .au-selbar button { border: 0; border-radius: 12px; padding: 9px 13px; font-weight: 800; cursor: pointer; }
+        .au-sb-x { background: rgba(255,255,255,.15); color: #fff; } .au-sb-all { background: rgba(255,255,255,.15); color: #fff; }
+        .au-sb-del { background: #ef4444; color: #fff; } .au-sb-del:disabled { opacity: .45; }
+        .au-day { margin: 16px 2px 8px; font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+        .au-list { display: flex; flex-direction: column; gap: 6px; }
+        .au-row { display: grid; grid-template-columns: 0 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; cursor: pointer;
+            border: 1px solid var(--border, #e2e8f0); border-left: 4px solid var(--c); background: var(--bg-card, #fff); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+            transition: background .15s, transform .12s, grid-template-columns .2s; animation: attIn .3s cubic-bezier(.2,.8,.2,1) backwards; }
+        .au-row:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.06); }
+        .au-row.warn { background: rgba(239,68,68,.06); }
+        .au-ic { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 1.15rem; background: color-mix(in srgb, var(--c) 16%, transparent); }
+        .au-m { min-width: 0; } .au-m b { display: block; font-size: .9rem; line-height: 1.35; word-break: break-word; }
+        .au-m small { display: block; margin-top: 3px; font-size: .74rem; color: #64748b; }
+        .au-t { text-align: right; line-height: 1.2; } .au-t b { display: block; font-size: .86rem; font-variant-numeric: tabular-nums; } .au-t small { font-size: .7rem; color: #94a3b8; }
+        .au-t em { display: inline-block; font-style: normal; font-size: .64rem; font-weight: 800; color: #fff; background: #3b82f6; padding: 1px 7px; border-radius: 99px; margin-bottom: 3px; }
+        .au-ck { width: 0; height: 22px; overflow: hidden; border-radius: 50%; border: 2px solid #94a3b8; opacity: 0; transition: width .2s, opacity .2s; }
+        .au-selecting .au-row { grid-template-columns: 24px 40px minmax(0, 1fr) auto; }
+        .au-selecting .au-ck { width: 22px; opacity: 1; }
+        .au-row.sel { background: rgba(99,102,241,.12); border-color: #6366f1; }
+        .au-row.sel .au-ck { background: #6366f1; border-color: #6366f1; box-shadow: inset 0 0 0 3px #fff; }
+        .au-more { margin: 14px 0 6px; text-align: center; } .au-more button { padding: 11px 18px; border-radius: 14px; border: 1.5px solid var(--border, #e2e8f0); background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
+        .au-end { font-size: .76rem; color: #94a3b8; }
+        .au-dhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; } .au-dhead .pe-title { font-size: 1.05rem; line-height: 1.35; }
+        .au-kvs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        .au-kv { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-radius: 12px; background: rgba(100,116,139,.08); font-size: .86rem; }
+        .au-kv span { color: #64748b; flex: none; } .au-kv b { text-align: right; word-break: break-word; } .au-kv small { font-weight: 500; color: #94a3b8; }
+        .au-diff { border: 1px solid var(--border, #e2e8f0); border-radius: 14px; overflow: hidden; margin-bottom: 12px; font-size: .84rem; }
+        .au-dh, .au-dr { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 8px; padding: 8px 12px; }
+        .au-dh { background: rgba(100,116,139,.1); font-size: .76rem; } .au-dr + .au-dr, .au-dh + .au-dr { border-top: 1px solid var(--border, #e2e8f0); }
+        .au-dr span { color: #64748b; } .au-dr b { word-break: break-word; } .au-dr.ch b:nth-of-type(1) { color: #dc2626; text-decoration: line-through; } .au-dr.ch b:nth-of-type(2) { color: #16a34a; }
+        html[data-ui="dark"] .au-row { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); border-left-color: var(--c); }
+        html[data-ui="dark"] .au-m small, html[data-ui="dark"] .au-day, html[data-ui="dark"] .au-kv span, html[data-ui="dark"] .au-dr span { color: #a5b0c8; }
+        html[data-ui="dark"] .au-tools input, html[data-ui="dark"] .au-tools select, html[data-ui="dark"] .au-selbtn, html[data-ui="dark"] .au-cats button:not(.on) { border-color: rgba(255,255,255,.16); }
+        html[data-ui="dark"] .au-dr.ch b:nth-of-type(1) { color: #ff6b78; } html[data-ui="dark"] .au-dr.ch b:nth-of-type(2) { color: #4ade80; }
+        @media (max-width: 768px) {
+            .au-row { padding: 10px; gap: 10px; } .au-ic { width: 36px; height: 36px; }
+            .au-tools select { flex: 1 1 140px; } .au-dh, .au-dr { grid-template-columns: .9fr 1fr 1fr; font-size: .8rem; }
+            #mobileBottomNav .nb-ic > .au-badge { top: -4px; right: -10px; min-width: 18px; height: 18px; line-height: 18px; font-size: .64rem; }
+        }
 </style>
 </head><body>
 
@@ -5425,7 +5490,7 @@
                 <div class="brand-logo login-logo" role="img" aria-label="OLMOS XATAMOV logotipi"></div>
                 <div class="lb-greet" id="lbGreet">Xush kelibsiz 👋</div>
                 <h1>OLMOS XATAMOV</h1>
-                <p>Professional Boshqaruv Tizimi v13.14</p>
+                <p>Professional Boshqaruv Tizimi v13.16</p>
                 <form id="loginForm" autocomplete="on">
                     <div class="form-group lf-group">
                         <div class="lf"><span class="lf-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span><input type="text" id="username" placeholder="Login" aria-label="Login" required autocomplete="username" autocapitalize="off" spellcheck="false"></div>
@@ -6066,6 +6131,15 @@
                 <div id="arcBody"></div>
             </div>
 
+            <!-- v13.15: OXIRGI AMALLAR (faqat rahbar) -->
+            <div class="content-section" id="auditSection">
+                <div class="section-header">
+                    <h2>🕓 Oxirgi amallar</h2>
+                    <button class="back-btn" onclick="goBack()">Orqaga</button>
+                </div>
+                <div id="auBody"></div>
+            </div>
+
             <div class="content-section" id="attendanceSection">
                 <div class="section-header">
                     <h2>📋 Yo'qlama — maktab o'quvchilari</h2>
@@ -6637,7 +6711,7 @@
             </div>
         </header>
         <div class="ap-body" id="apBody"></div>
-        <div class="ap-foot">OXMED Pro 13.14 • oxmed.uz</div>
+        <div class="ap-foot">OXMED Pro 13.16 • oxmed.uz</div>
     </div>
 
     <div class="teacher-portal" id="teacherPortal" data-theme="light" data-tab="home">
@@ -6863,7 +6937,7 @@
                 <button type="button" class="tp-back" onclick="setTeacherTab('home')">‹ Bosh sahifa</button>
                 <div class="att" id="tpAttRoot"></div>
             </div>
-            <div class="tp-version">OXMED <b class="app-ver">Pro 13.14</b> • oxmed.uz</div>
+            <div class="tp-version">OXMED <b class="app-ver">Pro 13.16</b> • oxmed.uz</div>
         </div>
     </div>
 
@@ -7245,6 +7319,8 @@
                 const [icon, title, sub] = SET_TILES[id];
                 out.push({ id: 'set_' + id, icon, title, sub, run: `fromFolder('settings', () => settingsShowPanel('${id}'))`, section: 'settingsSection' });
             });
+            if (isR) out.push({ id: 'set_audit', icon: '🕓', title: 'Oxirgi amallar', sub: "Kim, nimani, qachon qildi — 30 kunlik jurnal", tc: '#fef2f2',
+                run: "fromFolder('settings', () => openAuditSection())", section: 'auditSection', fresh: Date.now() < Date.parse('2026-11-29T23:59:59+05:00') });   // v13.15
             out.push({ id: 'set_theme', icon: '🌗', title: "Ko'rinish rejimi", sub: document.documentElement.getAttribute('data-ui') === 'dark' ? "Hozir: 🌙 Tungi" : "Hozir: ☀️ Kunduzgi (oq)", run: 'openThemePicker()', section: 'settingsSection' });
             ['menuRecycleBin', 'menuReports'].forEach(cid => {
                 const c = document.getElementById(cid);
@@ -7331,7 +7407,7 @@
                 <div class="sb-label">Bo'limlar</div>
                 ${parts.join('')}
                 <button class="sb-install" onclick="installApp()"><span>💻</span><span>Kompyuterga o'rnatish<small>Ish stolida ikonka bo'ladi</small></span></button>
-                <div class="sb-foot">Pro 13.14 • oxmed.uz</div>
+                <div class="sb-foot">Pro 13.16 • oxmed.uz</div>
             `;
         }
         // yon menyu: guruh bosilsa — strelka pastga tushadi, ichidagilar ochiladi VA papka sahifasi ochiladi
@@ -17086,7 +17162,7 @@
         // v13.5: TUNGI REJIM — avtomatik moslashtirish. Ko'p bloklar foni sahifada to'g'ridan-to'g'ri oq/och yozilgan;
         // tungi rejimda: och fonli bloklar → shaffof shisha (dk-bg), to'q fonda qolib ketgan qora yozuvlar → ochiq (dk-ink),
         // qizil/yashil yozuvlar → yorqin (rg-red / rg-green). Faqat tungi rejimda ishlaydi; kunduzgiga hech narsa qilmaydi.
-        const DK_SKIP = '.ai-card, .ai-fab, .sf-sw, .sf-perm input, .c-teal .v, .c-term .v, .m-sum-term b, .term-y, .pill.terminal, .badge-term, .cx, svg, .notification, .menu-locked, .lock-price, .ib-btn, .thp, .nb-fab-ic, .cx-badge, .sb-new, .new-ribbon, img, canvas, input[type="checkbox"], input[type="radio"], .tp-nav, .menu-star';
+        const DK_SKIP = '.au-badge, .au-selbar, .au-t em, .ai-card, .ai-fab, .sf-sw, .sf-perm input, .c-teal .v, .c-term .v, .m-sum-term b, .term-y, .pill.terminal, .badge-term, .cx, svg, .notification, .menu-locked, .lock-price, .ib-btn, .thp, .nb-fab-ic, .cx-badge, .sb-new, .new-ribbon, img, canvas, input[type="checkbox"], input[type="radio"], .tp-nav, .menu-star';
         const dkRGB = c => { const m = c && c.match(/rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?/); return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] } : null; };
         const dkLum = x => (0.299 * x.r + 0.587 * x.g + 0.114 * x.b) / 255;
         function dkBgLum(cs) {
@@ -17607,6 +17683,192 @@
             }
             return r.reply || 'Tushunmadim';
         }
+        // =====================================================================
+        // v13.15: 🕓 OXIRGI AMALLAR — kim, nimani, kimga, qachon (soniyasigacha). Faqat rahbar. 30 kun saqlanadi.
+        // Qizil belgi (yangi amallar soni): Sozlamalar kafeli, yon menyu, pastki menyu, "Oxirgi amallar" kafeli.
+        // Bosib turilsa — belgilash rejimi, tepada "O'chirish".
+        // =====================================================================
+        const AU_CATS = [['', 'Hammasi', '📚'], ['pay', "To'lovlar", '💰'], ['stu', "O'quvchilar", '👥'], ['exp', 'Xarajatlar', '🧾'], ['sal', 'Oylik / avans', '🏦'],
+            ['staff', 'Xodimlar', '👷'], ['login', 'Kirish / parollar', '🔐'], ['att', "Yo'qlama", '📋'], ['sms', 'SMS', '✉️'], ['set', 'Sozlamalar', '⚙️']];
+        const AU_IC = { pay: ['💰', '#10b981'], stu: ['👥', '#6366f1'], exp: ['🧾', '#ef4444'], sal: ['🏦', '#8b5cf6'], staff: ['👷', '#0ea5e9'], login: ['🔐', '#f59e0b'],
+            att: ['📋', '#14b8a6'], sms: ['✉️', '#ec4899'], set: ['⚙️', '#64748b'], other: ['•', '#94a3b8'] };
+        const AU = { unread: 0, items: [], seen: 0, cat: '', who: '', q: '', more: false, sel: new Set(), selMode: false, whoList: [], loading: false, qT: null };
+        const auIsR = () => currentUser && currentUser.role === 'Markaz rahbari' && !PERM.on;
+        async function auPoll() {
+            if (!auIsR() || !authToken) return;
+            try { AU.unread = (await apiFetch('/audit/unread')).count || 0; } catch (e) { return; }
+            auPaint();
+        }
+        setInterval(() => { if (auIsR() && document.visibilityState === 'visible') auPoll(); }, 45000);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') auPoll(); });
+        function auPaint() {
+            const n = auIsR() ? AU.unread : 0, txt = n > 99 ? '99+' : String(n);
+            const spots = [document.getElementById('menuSettings'), document.querySelector('#sidebar .sb-grp[data-fold="settings"] > .sb-ghead'),
+                ...document.querySelectorAll('#mobileBottomNav [onclick="openSettingsHome()"] .nb-ic'), ...document.querySelectorAll('[onclick*="openAuditSection"]'),
+                document.querySelector('#sidebar [data-kid="set_audit"]')].filter(Boolean);
+            spots.forEach(el => {
+                let b = el.querySelector(':scope > .au-badge');
+                if (!b) { b = document.createElement('span'); b.className = 'au-badge'; el.appendChild(b); }
+                b.textContent = txt; b.classList.toggle('on', n > 0);
+            });
+        }
+        (function () {   // menyular qayta chizilganda belgi yo'qolmasin
+            const wrap = name => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { auPaint(); } catch (e) {} return r; }; };
+            ['renderSidebar', 'renderMobileBottomNav', 'settingsShowTiles', 'openFolder'].forEach(wrap);
+            setTimeout(auPoll, 2500);
+        })();
+        function openAuditSection() {
+            showSection('auditSection');
+            AU.sel.clear(); AU.selMode = false;
+            const b = document.getElementById('auBody');
+            if (!b.dataset.ready) {
+                b.dataset.ready = '1';
+                b.innerHTML = `
+                    <div class="au-top">
+                        <div class="au-intro">Tizimdagi har bir o'zgarish shu yerda: <b>kim</b>, <b>nimani</b>, <b>kimga</b>, <b>qachon</b> (soniyasigacha). Yozuvlar <b>30 kun</b> saqlanadi, keyin o'zi o'chadi. O'chirish uchun yozuvni <b>bosib turing</b>.</div>
+                        <div class="au-cats" id="auCats"></div>
+                        <div class="au-tools">
+                            <input type="search" id="auQ" placeholder="🔍 Qidirish: ism, o'quvchi, summa…" oninput="clearTimeout(AU.qT);AU.qT=setTimeout(()=>{AU.q=this.value.trim();auLoad()},350)">
+                            <select id="auWho" onchange="AU.who=this.value;auLoad()"><option value="">👤 Hamma</option></select>
+                            <button type="button" class="au-selbtn" onclick="auSelMode(!AU.selMode)">☑️ Belgilash</button>
+                        </div>
+                    </div>
+                    <div class="au-selbar" id="auSelBar"></div>
+                    <div class="au-list" id="auList"></div>
+                    <div class="au-more" id="auMore"></div>`;
+            }
+            auRenderCats();
+            auLoad();
+            apiFetch('/audit/who').then(w => {
+                AU.whoList = w || [];
+                const s = document.getElementById('auWho'); if (!s) return;
+                s.innerHTML = '<option value="">👤 Hamma</option>' + AU.whoList.map(x => `<option value="${escapeHtml(x.username)}" ${x.username === AU.who ? 'selected' : ''}>${escapeHtml(x.who)} (${x.count})</option>`).join('');
+            }).catch(() => {});
+        }
+        function auRenderCats() {
+            const c = document.getElementById('auCats'); if (!c) return;
+            c.innerHTML = AU_CATS.map(([k, t, ic]) => `<button type="button" class="${AU.cat === k ? 'on' : ''}" onclick="AU.cat='${k}';auRenderCats();auLoad()">${ic} ${t}</button>`).join('');
+        }
+        async function auLoad(more) {
+            if (AU.loading) return; AU.loading = true;
+            const list = document.getElementById('auList'); if (!list) { AU.loading = false; return; }
+            if (!more && !AU.items.length) list.innerHTML = '<div class="att-loading"><span></span><span></span><span></span></div>';
+            const p = new URLSearchParams({ limit: '100' });
+            if (AU.cat) p.set('cat', AU.cat); if (AU.who) p.set('who', AU.who); if (AU.q) p.set('q', AU.q);
+            if (more && AU.items.length) p.set('before_id', AU.items[AU.items.length - 1].id);
+            try {
+                const r = await apiFetch('/audit?' + p.toString());
+                AU.items = more ? AU.items.concat(r.items) : r.items; AU.more = r.has_more;
+                if (!more) AU.seen = r.seen_id;
+                auRender();
+                const mx = r.items.length ? r.items[0].id : 0;
+                if (!more && !AU.cat && !AU.who && !AU.q && mx > (r.seen_id || 0)) {   // ko'rildi — qizil belgi yo'qoladi ("Yangi" nuqtalari shu safar turadi)
+                    apiFetch('/audit/seen', { method: 'POST', body: JSON.stringify({ last_id: mx }) }).then(() => { AU.unread = 0; auPaint(); }).catch(() => {});
+                } else if (!more && !AU.cat && !AU.who && !AU.q) { AU.unread = 0; auPaint(); }
+            } catch (e) { list.innerHTML = `<div class="att-empty">⚠️ ${escapeHtml(e.message)}</div>`; }
+            finally { AU.loading = false; }
+        }
+        function auDayLabel(ts) {
+            const d = new Date(ts + 5 * 3600e3), n = new Date(Date.now() + 5 * 3600e3);
+            const key = x => x.toISOString().slice(0, 10), k = key(d);
+            if (k === key(n)) return 'Bugun';
+            if (k === key(new Date(n.getTime() - 86400e3))) return 'Kecha';
+            const days = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
+            return `${d.getUTCDate()}-${UZ_MONTH_NAMES[d.getUTCMonth()].toLowerCase()}, ${days[d.getUTCDay()]}`;
+        }
+        function auRender() {
+            const list = document.getElementById('auList'); if (!list) return;
+            if (!AU.items.length) { list.innerHTML = `<div class="att-empty">${AU.cat || AU.who || AU.q ? 'Hech narsa topilmadi' : "📭 Hali amal yo'q"}</div>`; document.getElementById('auMore').innerHTML = ''; auSelBar(); return; }
+            let html = '', day = '';
+            AU.items.forEach((x, i) => {
+                const dl = auDayLabel(x.at);
+                if (dl !== day) { day = dl; html += `<div class="au-day">${escapeHtml(dl)}</div>`; }
+                const [ic, col] = AU_IC[x.cat] || AU_IC.other;
+                const isNew = x.id > AU.seen && x.username !== currentUser.username;
+                const warn = x.title.startsWith('⚠️');
+                html += `<div class="au-row ${AU.sel.has(x.id) ? 'sel' : ''} ${warn ? 'warn' : ''}" data-id="${x.id}" style="--c:${col};animation-delay:${Math.min(i, 12) * 18}ms">
+                    <span class="au-ck"></span>
+                    <span class="au-ic">${ic}</span>
+                    <span class="au-m"><b>${escapeHtml(x.title)}</b>
+                        <small>👤 ${escapeHtml(x.who || x.username || "Noma'lum")}${x.role && x.who !== 'Rahbar' && x.who !== 'Admin' ? ' • ' + escapeHtml(x.role) : ''}${x.ua ? ' • 📱 ' + escapeHtml(x.ua) : ''}</small></span>
+                    <span class="au-t">${isNew ? '<em>Yangi</em>' : ''}<b>${escapeHtml((x.date || '').slice(11, 19))}</b><small>${escapeHtml((x.date || '').slice(0, 10))}</small></span>
+                </div>`;
+            });
+            list.innerHTML = html;
+            document.getElementById('auMore').innerHTML = AU.more ? `<button type="button" onclick="auLoad(true)">⬇️ Yana yuklash</button>` : `<div class="au-end">— 30 kunlik jurnal oxiri —</div>`;
+            auSelBar();
+        }
+        // ---------- bosish / bosib turish ----------
+        (function () {
+            let t = null, sx = 0, sy = 0, fired = false;
+            const rowOf = e => e.target.closest && e.target.closest('#auList .au-row');
+            document.addEventListener('pointerdown', e => {
+                const r = rowOf(e); if (!r) return;
+                fired = false; sx = e.clientX; sy = e.clientY;
+                clearTimeout(t); t = setTimeout(() => { fired = true; if (!AU.selMode) auSelMode(true); auToggle(+r.dataset.id); try { navigator.vibrate && navigator.vibrate(15); } catch (er) {} }, 480);
+            });
+            document.addEventListener('pointermove', e => { if (t && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) { clearTimeout(t); t = null; } });
+            ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, () => { clearTimeout(t); t = null; }));
+            document.addEventListener('click', e => {
+                const r = rowOf(e); if (!r) return;
+                if (fired) { fired = false; return; }
+                if (AU.selMode) auToggle(+r.dataset.id); else auDetail(+r.dataset.id);
+            });
+            document.addEventListener('contextmenu', e => { if (rowOf(e)) e.preventDefault(); });
+        })();
+        function auSelMode(on) {
+            AU.selMode = !!on; if (!on) AU.sel.clear();
+            const b = document.getElementById('auBody'); if (b) b.classList.toggle('au-selecting', AU.selMode);
+            auRender();
+        }
+        function auToggle(id) {
+            if (AU.sel.has(id)) AU.sel.delete(id); else AU.sel.add(id);
+            const r = document.querySelector(`#auList .au-row[data-id="${id}"]`); if (r) r.classList.toggle('sel', AU.sel.has(id));
+            auSelBar();
+        }
+        function auSelBar() {
+            const bar = document.getElementById('auSelBar'); if (!bar) return;
+            if (!AU.selMode) { bar.classList.remove('on'); bar.innerHTML = ''; return; }
+            const n = AU.sel.size, all = AU.items.length && AU.items.every(x => AU.sel.has(x.id));
+            bar.classList.add('on');
+            bar.innerHTML = `<button type="button" class="au-sb-x" onclick="auSelMode(false)">✕</button><b>${n} ta tanlandi</b>
+                <button type="button" class="au-sb-all" onclick="auSelAll(${all ? 'false' : 'true'})">${all ? 'Bekor' : 'Hammasini tanlash'}</button>
+                <button type="button" class="au-sb-del" ${n ? '' : 'disabled'} onclick="auDelete()">🗑️ O'chirish</button>`;
+        }
+        function auSelAll(on) { AU.sel.clear(); if (on) AU.items.forEach(x => AU.sel.add(x.id)); auRender(); }
+        function auDelete() {
+            const ids = [...AU.sel]; if (!ids.length) return;
+            showConfirmModal(`${ids.length} ta yozuv "Oxirgi amallar"dan o'chiriladi. Buni qaytarib bo'lmaydi.`, async () => {
+                try {
+                    const r = await apiFetch('/audit', { method: 'DELETE', body: JSON.stringify({ ids }) });
+                    showNotification(`🗑️ ${r.deleted} ta yozuv o'chirildi`);
+                    auSelMode(false); auLoad();
+                } catch (e) { showNotification('❌ ' + e.message, 'error'); }
+            });
+        }
+        function auDetail(id) {
+            const x = AU.items.find(i => i.id === id); if (!x) return;
+            const [ic, col] = AU_IC[x.cat] || AU_IC.other;
+            const kv = o => Object.entries(o || {}).map(([k, v]) => `<div class="au-kv"><span>${escapeHtml(k)}</span><b>${escapeHtml(v == null || v === '' ? '—' : (typeof v === 'object' ? JSON.stringify(v) : v))}</b></div>`).join('');
+            let det = '';
+            const d = x.details;
+            if (d && d['Oldin'] && d['Keyin']) {
+                const keys = [...new Set([...Object.keys(d['Oldin']), ...Object.keys(d['Keyin'])])];
+                det = `<div class="au-diff"><div class="au-dh"><span></span><b>Oldin</b><b>Keyin</b></div>${keys.map(k => { const a = d['Oldin'][k], b = d['Keyin'][k], ch = String(a) !== String(b);
+                    return `<div class="au-dr ${ch ? 'ch' : ''}"><span>${escapeHtml(k)}</span><b>${escapeHtml(a == null || a === '' ? '—' : a)}</b><b>${escapeHtml(b == null || b === '' ? '—' : b)}</b></div>`; }).join('')}</div>`;
+            } else if (d) det = `<div class="au-kvs">${kv(d)}</div>`;
+            openEditModal(`
+                <div class="au-dhead" style="--c:${col}"><span class="au-ic">${ic}</span><div><div class="pe-title">${escapeHtml(x.title)}</div></div></div>
+                <div class="au-kvs">
+                    <div class="au-kv"><span>👤 Kim</span><b>${escapeHtml(x.who || x.username || "Noma'lum")}${x.username ? ' <small>(login: ' + escapeHtml(x.username) + ')</small>' : ''}</b></div>
+                    ${x.role ? `<div class="au-kv"><span>💼 Roli</span><b>${escapeHtml(x.role)}</b></div>` : ''}
+                    <div class="au-kv"><span>🕓 Qachon</span><b>${escapeHtml(x.date)}</b></div>
+                    ${x.ua ? `<div class="au-kv"><span>📱 Qurilma</span><b>${escapeHtml(x.ua)}</b></div>` : ''}
+                    ${x.ip ? `<div class="au-kv"><span>🌐 IP manzil</span><b>${escapeHtml(x.ip)}</b></div>` : ''}
+                </div>
+                ${det}
+                <div class="modal-buttons pe-btns"><span class="pe-sp"></span><button class="btn-primary sc-close" onclick="closeEditModal()">Yopish</button></div>`);
+        }
         // v13.4: Sozlamalar → Ko'rinish rejimi (telefon va kompyuter)
         function setUiMode(mode) {
             if (mode === 'dark') document.documentElement.setAttribute('data-ui', 'dark'); else document.documentElement.removeAttribute('data-ui');
@@ -17641,6 +17903,7 @@
             const act = id => { const el = document.getElementById(id); return el && el.classList.contains('active'); };
             try {
                 if (act('bossTableSection')) renderBossTable();
+                if (act('auditSection')) auLoad();   // v13.15
                 if (act('historySection')) { const m = document.querySelector('#monthTabs .month-tab.active'); if (m) filterHistoryByMonth(m.dataset.m || m.textContent); }
                 if (act('adminHistorySection')) showAdminHistory();
                 if (act('attendanceSection') && SAT.view === 'day' && satEl()) satLoad();   // v12.6

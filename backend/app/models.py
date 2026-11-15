@@ -21,6 +21,7 @@ class User(Base):
     # v12.8: rahbar xodimlar parolini ko'ra olishi uchun — server kaliti bilan shifrlangan nusxa (AES-GCM)
     password_enc = Column(Text, nullable=True)
     last_seen = Column(BigInteger, nullable=True)   # v13.0: chat — "onlayn" / "oxirgi marta"
+    audit_seen_id = Column(Integer, nullable=True)   # v13.15: rahbar oxirgi amallarni qaysigacha ko'rgan
     avatar_data = Column(Text, nullable=True)       # v13.3: profil rasmi (kichik JPEG, data URL)
     avatar_v = Column(BigInteger, nullable=True)    # v13.3: rasm versiyasi (kesh uchun)
 
@@ -548,3 +549,23 @@ class ChatReaction(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     emoji = Column(String(16), nullable=False)
     created_at = Column(BigInteger, nullable=False)
+
+
+class ActivityLog(Base):
+    """v13.15: OXIRGI AMALLAR — tizimdagi har bir o'zgarish (kim, nima, qachon). 30 kun saqlanadi. Faqat rahbar ko'radi."""
+    __tablename__ = "activity_log"
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(BigInteger, nullable=False, index=True)          # ms
+    username = Column(String(64), nullable=True, index=True)
+    who = Column(String(200), nullable=True)                     # "Rahbar" / "Admin" / "Vali (Matematika o'qituvchisi)"
+    role = Column(String(60), nullable=True)
+    cat = Column(String(20), nullable=False, default="other", index=True)   # pay|stu|exp|sal|staff|login|set|sms|att|other
+    action = Column(String(80), nullable=False)                  # "PUT /api/payments/#"
+    title = Column(String(500), nullable=False)
+    details = Column(JSON, nullable=True)
+    entity = Column(String(30), nullable=True)
+    entity_id = Column(Integer, nullable=True)
+    ip = Column(String(64), nullable=True)
+    ua = Column(String(80), nullable=True)
+    status = Column(Integer, nullable=True)
+

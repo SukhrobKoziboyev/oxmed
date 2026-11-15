@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth, ledger
+from ..audit import note as audit_note, money as _m
 from ..database import get_db
 from ..utils import now_uz, now_uz_datestring, now_timestamp_ms, clean_staff_phone
 
@@ -34,6 +35,14 @@ def _get_staff(db: Session, staff_id: int) -> models.Teacher:
     t = db.query(models.Teacher).filter(models.Teacher.id == staff_id, models.Teacher.is_staff.is_(True)).first()
     if not t:
         raise HTTPException(status_code=404, detail="Xodim topilmadi!")
+    return t
+
+
+def _any_teacher(db: Session, tid: int) -> models.Teacher:
+    """v13.15: oylik yozuvi o'qituvchiniki (qo'shimcha/adminlik oyligi) ham bo'lishi mumkin — faqat xodim emas."""
+    t = db.query(models.Teacher).filter(models.Teacher.id == tid).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Topilmadi!")
     return t
 
 
@@ -90,6 +99,7 @@ def create_staff(payload: schemas.StaffIn, current_user: models.User = Depends(a
     db.commit()
     db.refresh(t)
     ledger.ensure_staff_accruals(db, t)
+    audit_note(f"Xodim qo'shdi: {t.name} — {t.position}, oylik {_m(t.monthly_salary or 0)} so'm ({t.salary_start} dan)", cat="staff", entity="teacher", entity_id=t.id)
     return _to_out(db, t)
 
 
@@ -101,11 +111,16 @@ def edit_staff(staff_id: int, payload: schemas.StaffIn, current_user: models.Use
     allaqachon hisoblangan oylar o'zgarmaydi (kerak bo'lsa ularni alohida tahrirlang)."""
     t = _get_staff(db, staff_id)
     name, position, salary, start = _validate(payload)
+    _b = (t.name, t.position, int(t.monthly_salary or 0), t.salary_start, t.phone)
     t.name, t.position, t.monthly_salary, t.salary_start = name, position, salary, start
     if payload.phone is not None:
         t.phone = _phone(payload)
     if payload.can_expenses is not None:
         t.can_expenses = bool(payload.can_expenses)
+    _a = (t.name, t.position, int(t.monthly_salary or 0), t.salary_start, t.phone)
+    _lb = ("Ism", "Lavozim", "Oylik", "Boshlanish", "Telefon")
+    _chg = [f"{_lb[i]}: {_m(_b[i]) if i == 2 else (_b[i] or '—')} → {_m(_a[i]) if i == 2 else (_a[i] or '—')}" for i in range(5) if _b[i] != _a[i]]
+    audit_note(f"Xodim ma'lumotini tahrirladi: {t.name} — " + ("; ".join(_chg) or "o'zgarishsiz"), cat="staff", entity="teacher", entity_id=t.id)
     db.commit()
     ledger.ensure_staff_accruals(db, t)
     return _to_out(db, t)
@@ -117,6 +132,7 @@ def delete_staff(staff_id: int, current_user: models.User = Depends(auth.require
     """Xodimni o'chirish. Hisob yozuvlari (berilgan oyliklar va hisoblangan oyliklar)
     tarix uchun saqlanadi (teacher_id=NULL), login esa o'chadi."""
     t = _get_staff(db, staff_id)
+    audit_note(f"Xodimni o'chirdi: {t.name} ({t.position}) — hisob yozuvlari saqlandi, logini o'chdi", cat="staff", entity="teacher", entity_id=t.id)
     db.delete(t)
     db.commit()
     return {"ok": True}
@@ -163,6 +179,7 @@ def merge_staff_into_teacher(staff_id: int, payload: MergeIn, current_user: mode
     if after != before:
         db.rollback()
         raise HTTPException(status_code=500, detail="Hisob-kitob mos kelmadi — birlashtirish bekor qilindi")
+    audit_note(f"Xodim yozuvini o'qituvchiga birlashtirdi: {s.name} ({s.position}) → {t.name}; yangi balans {_m(after)} so'm", cat="staff", entity="teacher", entity_id=t.id)
     db.delete(s)
     db.commit()
     ledger.ensure_staff_accruals(db, t)
@@ -189,6 +206,8 @@ def add_accrual(staff_id: int, payload: schemas.AccrualIn, current_user: models.
         note=(payload.note or "").strip() or None, date_str=now_uz_datestring(), timestamp=now_timestamp_ms(),
         created_by=current_user.username,
     ))
+    audit_note(f"Qo'shimcha hisobladi (bonus): {t.name} — {_m(payload.amount)} so'm" + (f" ({payload.note.strip()})" if (payload.note or "").strip() else ""),
+               cat="sal", entity="teacher", entity_id=t.id)
     db.commit()
     return _to_out(db, t)
 
@@ -202,11 +221,14 @@ def edit_accrual(accrual_id: int, payload: schemas.AccrualEditIn, current_user: 
         raise HTTPException(status_code=404, detail="Yozuv topilmadi!")
     if payload.amount is None or payload.amount < 0:
         raise HTTPException(status_code=400, detail="Summa noto'g'ri!")
+    _old = int(ac.amount)
     ac.amount = int(payload.amount)
     if payload.note is not None:
         ac.note = payload.note.strip() or None
+    audit_note(f"Hisoblangan oylikni o'zgartirdi: {ac.teacher_name} — {ledger.period_label(ac.period) if ac.period else 'qoʻshimcha'}: {_m(_old)} → {_m(ac.amount)} so'm",
+               cat="sal", entity="accrual", entity_id=ac.id)
     db.commit()
-    return _to_out(db, _get_staff(db, ac.teacher_id))
+    return _to_out(db, _any_teacher(db, ac.teacher_id))
 
 
 @router.delete("/accrual/{accrual_id}", response_model=schemas.StaffOut)
@@ -218,10 +240,12 @@ def delete_accrual(accrual_id: int, current_user: models.User = Depends(auth.req
     if not ac or not ac.teacher_id:
         raise HTTPException(status_code=404, detail="Yozuv topilmadi!")
     tid = ac.teacher_id
+    audit_note(f"Hisoblangan oylikni bekor qildi: {ac.teacher_name} — {ledger.period_label(ac.period) if ac.period else 'qoʻshimcha'}, {_m(ac.amount)} so'm",
+               cat="sal", entity="accrual", entity_id=ac.id)
     if ac.kind == "monthly":
         ac.amount = 0
         ac.note = f"bekor qilindi ({current_user.username})"
     else:
         db.delete(ac)
     db.commit()
-    return _to_out(db, _get_staff(db, tid))
+    return _to_out(db, _any_teacher(db, tid))

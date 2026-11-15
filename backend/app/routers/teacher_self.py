@@ -17,6 +17,7 @@ from ..database import get_db
 from ..utils import current_uz_month_name, format_group_label, now_timestamp_ms, clean_staff_phone, in_current_window
 from ..student_links import find_duplicates
 from .. import ledger
+from ..audit import note as audit_note
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher-self"])
 
@@ -154,10 +155,12 @@ def set_my_phone(data: MyPhoneIn, current_user: models.User = Depends(auth.requi
     if not t:
         raise HTTPException(status_code=404, detail="Topilmadi!")
     try:
+        old = t.phone
         t.phone = clean_staff_phone(data.phone)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     db.commit()
+    audit_note(f"O'z telefon raqamini o'zgartirdi: {old or '—'} → {t.phone or '—'}", cat="staff", entity="teacher", entity_id=t.id)
     return {"ok": True, "phone": t.phone}
 
 
@@ -232,6 +235,7 @@ def add_my_group(data: MyGroupIn, current_user: models.User = Depends(auth.requi
     db.add(g)
     db.commit()
     db.refresh(g)
+    audit_note(f"Guruh qo'shdi: {format_group_label(g)}", cat="stu", entity="group", entity_id=g.id)
     return {**_group_out(g), "students": 0}
 
 
@@ -245,6 +249,7 @@ def delete_my_group(gid: int, current_user: models.User = Depends(auth.require_t
     n = sum(1 for _, _, gl in my_students(db, t) if gl == label)
     if n:
         raise HTTPException(status_code=400, detail=f"Bu guruhda {n} ta o'quvchi bor — avval ularni boshqa guruhga o'tkazing yoki rahbarga ayting")
+    audit_note(f"Guruhni o'chirdi: {label}", cat="stu", entity="group", entity_id=g.id)
     db.delete(g)
     db.commit()
     return {"ok": True}
@@ -287,6 +292,8 @@ def add_my_student(data: MyStudentIn, current_user: models.User = Depends(auth.r
         db.add(models.StudentTeacher(student_id=st.id, teacher_id=t.id, group_label=glabel,
                                      added_by=current_user.username, added_at=now_timestamp_ms()))
         db.commit()
+        audit_note(f"Bazadagi o'quvchini o'z ro'yxatiga qo'shdi: {st.last_name} {st.first_name}" + (f" ({glabel})" if glabel else ""),
+                   cat="stu", entity="student", entity_id=st.id)
         return {"id": st.id, "first_name": st.first_name, "last_name": st.last_name, "phone": st.phone, "group_label": glabel, "linked": True}
 
     fn, ln, ph = " ".join(data.first_name.split()), " ".join(data.last_name.split()), data.phone.strip()
@@ -310,6 +317,9 @@ def add_my_student(data: MyStudentIn, current_user: models.User = Depends(auth.r
     db.add(st)
     db.commit()
     db.refresh(st)
+    audit_note(f"O'quvchi qo'shdi: {st.last_name} {st.first_name} (repetitor, {t.subject.name}" + (f", {glabel}" if glabel else "") + f"), tel {st.phone}",
+               cat="stu", entity="student", entity_id=st.id,
+               details={"Ism": st.first_name, "Familiya": st.last_name, "Telefon": st.phone, "Fan": t.subject.name, "Guruh": glabel or "Guruhsiz"})
     return {"id": st.id, "first_name": st.first_name, "last_name": st.last_name, "phone": st.phone, "group_label": st.group_label}
 
 
@@ -320,6 +330,9 @@ def remove_my_link(sid: int, current_user: models.User = Depends(auth.require_te
     link = db.query(models.StudentTeacher).filter(models.StudentTeacher.student_id == sid, models.StudentTeacher.teacher_id == t.id).first()
     if not link:
         raise HTTPException(status_code=400, detail="Bu o'quvchini faqat rahbar yoki admin o'zgartira oladi")
+    _st = db.query(models.Student).filter(models.Student.id == sid).first()
+    audit_note(f"O'quvchini o'z ro'yxatidan chiqardi: {(_st.last_name + ' ' + _st.first_name) if _st else sid} (bazada qoldi)",
+               cat="stu", entity="student", entity_id=sid)
     db.delete(link)
     db.commit()
     return {"ok": True}

@@ -27,6 +27,7 @@ from .routers import attendance as attendance_router
 from .routers import school_attendance as school_att_router
 from .routers import chat as chat_router
 from .routers import ai as ai_router   # v13.14: ovozli yordamchi (Gemini)
+from .routers import audit as audit_router   # v13.15: oxirgi amallar
 
 app = FastAPI(
     title="O'quv Markaz Boshqaruv Tizimi API",
@@ -45,6 +46,9 @@ origins = [o.strip() for o in cors_origins.split(",")] if cors_origins != "*" el
 # v8.7: API javoblarini siqib yuborish (telefon internetida 5-8 marta tezroq)
 app.add_middleware(GZipMiddleware, minimum_size=800)
 # v8.8: xavfsizlik (< > taqiqi, sarlavhalar)
+# v13.15: oxirgi amallar jurnali (har bir o'zgarish yoziladi)
+from .audit import AuditMiddleware  # noqa: E402
+app.add_middleware(AuditMiddleware)
 from .security import SecurityMiddleware  # noqa: E402
 app.add_middleware(SecurityMiddleware)
 
@@ -77,6 +81,7 @@ app.include_router(attendance_router.router)
 app.include_router(school_att_router.router)
 app.include_router(chat_router.router)
 app.include_router(ai_router.router)
+app.include_router(audit_router.router)
 
 
 @app.on_event("startup")
@@ -137,6 +142,8 @@ def _run_light_migrations():
         "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_expenses BOOLEAN NOT NULL DEFAULT FALSE",
         # v13.13: bitta login — rahbar ochib bergan menyular (ruxsatlar)
         "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS perms JSON",
+        # v13.15: oxirgi amallar — rahbar qaysigacha ko'rgan (qizil belgi uchun)
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS audit_seen_id INTEGER",
         "UPDATE students SET archive_kind = 'left' WHERE archived_at IS NOT NULL AND archive_kind IS NULL",
         # v8.6: o'quvchining qo'shimcha telefon raqami
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS phone2 VARCHAR(32)",

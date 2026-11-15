@@ -156,6 +156,10 @@ def mark(data: MarkIn, current_user: models.User = Depends(auth.require_attendan
         db.add(a)
     a.status, a.time, a.reason, a.deadline = status, t, reason, deadline
     a.marked_by, a.marked_at = current_user.username, now_timestamp_ms()
+    from ..audit import note as _an
+    _an(f"Yo'qlama: {st.last_name} {st.first_name} ({st.class_name or ''}) — "
+        + ({"present": f"keldi {t}", "late": f"kechikib keldi {t}", "absent": "kelmadi"}[status]) + (f", sabab: {reason}" if reason else "") + f" ({date})",
+        cat="att", entity="student", entity_id=st.id)
     db.commit()
     db.refresh(a)
     return {"ok": True, "row": _row(st, a, {}, db)}

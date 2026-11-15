@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from .. import models, schemas, auth
 from ..database import get_db
 from ..utils import format_group_label, clean_staff_phone
+from ..audit import note as audit_note, money as _m
 
 router = APIRouter(prefix="/api", tags=["teachers"])
 
@@ -100,6 +101,10 @@ def set_access(teacher_id: int, data: AccessIn, current_user: models.User = Depe
         t.salary_start = start if t.monthly_salary else t.salary_start
         if data.position is not None:
             t.position = " ".join(data.position.split())[:128] or None
+    _PN = {"pay": "To'lov kiritish", "hist": "To'lovlar tarixi", "bt": "Umumiy jadval", "students": "O'quvchilar", "att": "Yo'qlama", "sms": "SMS", "exp": "Xarajatlar"}
+    audit_note(f"Ruxsatlarni o'zgartirdi: {t.name} — " + (", ".join(_PN[k] for k in perms) if perms else "hech qaysi menyu ochiq emas")
+               + (f"; qo'shimcha oylik {_m(t.monthly_salary)} so'm ({t.salary_start} dan)" if (not t.is_staff and t.monthly_salary) else ""),
+               cat="login", entity="teacher", entity_id=t.id)
     db.commit()
     ledger.ensure_staff_accruals(db, t)
     db.refresh(t)
@@ -147,6 +152,7 @@ def create_teacher(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     teacher = models.Teacher(subject_id=subject.id, name=name, phone=phone)
+    audit_note(f"O'qituvchi qo'shdi: {name} ({subject.name})" + (f", tel {phone}" if phone else ""), cat="staff", entity="teacher")
     db.add(teacher)
     db.commit()
     db.refresh(teacher)
@@ -165,9 +171,11 @@ def set_teacher_phone(
     if not t:
         raise HTTPException(status_code=404, detail="Topilmadi!")
     try:
+        _old = t.phone
         t.phone = clean_staff_phone(payload.phone)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    audit_note(f"Telefon raqamini o'zgartirdi: {t.name} — {_old or '—'} → {t.phone or '—'}", cat="staff", entity="teacher", entity_id=t.id)
     db.commit()
     return {"ok": True, "phone": t.phone}
 
@@ -194,6 +202,7 @@ def delete_teacher(
             detail=f"Bu o'qituvchida {students_count} ta o'quvchi bor! Avval ularni boshqa o'qituvchiga ko'chiring.",
         )
 
+    audit_note(f"O'qituvchini o'chirdi: {teacher.name} ({teacher.subject.name})", cat="staff", entity="teacher", entity_id=teacher.id)
     db.delete(teacher)  # groups cascade orqali o'chadi
     db.commit()
     return {"ok": True}
@@ -337,6 +346,8 @@ def set_teacher_login(
         auth.set_password(user, payload.password)
         db.add(user)
 
+    _t = db.query(models.Teacher).filter(models.Teacher.id == teacher_id).first()
+    audit_note(f"Login berdi / o'zgartirdi: {_t.name if _t else teacher_id} — login \"{username}\" (parol yozilmaydi)", cat="login", entity="teacher", entity_id=teacher_id)
     db.commit()
     return schemas.TeacherLoginOut(has_login=True, username=username)
 

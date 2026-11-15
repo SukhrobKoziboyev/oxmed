@@ -7,6 +7,7 @@ from .. import models, schemas, auth
 from ..database import get_db
 from ..security import login_limiter, secret_limiter, client_ip
 
+from ..audit import note as audit_note
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Bitta IP'dan ko'p loginlarga urinish (20 xatodan keyin blok)
@@ -28,6 +29,9 @@ def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends
     if not user:
         auth.verify_password(payload.password or "x", _DUMMY_HASH)  # vaqt bo'yicha farq bilinmasin
     if not user or not auth.verify_password(payload.password, user.password_hash):
+        # v13.15: oxirgi amallar — noto'g'ri parol bilan kirishga urinish (parol yozilmaydi)
+        audit_note(f"⚠️ Noto'g'ri parol bilan kirishga urinish — login \"{(payload.username or '')[:40]}\"" + ("" if user else " (bunday login yo'q)"),
+                   cat="login", username=(payload.username or "")[:64] if user else None, force=True)
         login_limiter.fail(k_user)
         if k_ip:
             ip_limiter.fail(k_ip)
@@ -38,6 +42,7 @@ def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends
         user.password_enc = auth.encrypt_pw(payload.password)
         db.commit()
     token = auth.create_access_token(user.username, user.role)
+    audit_note("Tizimga kirdi (login va parol bilan)", cat="login", username=user.username)
     return schemas.LoginResponse(token=token, username=user.username, role=user.role)
 
 
@@ -69,6 +74,7 @@ def change_my_credentials(
             raise HTTPException(status_code=400, detail="Parol kamida 6 ta belgidan iborat bo'lishi kerak!")
         auth.set_password(current_user, payload.new_password)
 
+    audit_note("O'z login / parolini o'zgartirdi" + (f" (yangi login \"{payload.new_login}\")" if payload.new_login else ""), cat="login", username=current_user.username)
     db.commit()
     # Login (username) o'zgargan bo'lsa, eski token endi yaroqsiz bo'ladi (JWT
     # ichida eski username qotib qolgan) - shuning uchun yangi token qaytaramiz.
@@ -139,6 +145,7 @@ def recover_password(payload: schemas.RecoverPasswordRequest, request: Request, 
 
     rahbar.username = payload.new_login
     auth.set_password(rahbar, payload.new_password)
+    audit_note(f"⚠️ Rahbar login/paroli maxfiy parol orqali tiklandi — yangi login \"{payload.new_login}\"", cat="login", username=payload.new_login, force=True)
     db.commit()
     return {"ok": True}
 
@@ -235,12 +242,17 @@ def set_user_credentials(user_id: int, payload: UserCredIn,
     new_login = (payload.username or "").strip()
     if not new_login and not payload.password:
         raise HTTPException(status_code=400, detail="Kamida yangi login yoki parolni kiriting!")
+    _old = u.username
     if new_login and new_login != u.username:
         _check_login(db, new_login, u.id)
         u.username = new_login
     if payload.password:
         _check_pw(payload.password)
         auth.set_password(u, payload.password)
+    from ..student_links import who_label
+    audit_note(f"Xodimning kirish ma'lumotini o'zgartirdi: {who_label(db, u.username)} — "
+               + ", ".join(x for x in ((f"login \"{_old}\" → \"{u.username}\"" if _old != u.username else ""), ("parol yangilandi" if payload.password else "")) if x),
+               cat="login", entity="user", entity_id=u.id)
     db.commit()
     return _user_row(db, u)
 

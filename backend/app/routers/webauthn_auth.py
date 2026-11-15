@@ -195,6 +195,8 @@ def login_verify(payload: VerifyIn, db: Session = Depends(get_db)):
     cred.last_used_at = _now_ms()
     db.commit()
     token = auth.create_access_token(user.username, user.role)
+    from ..audit import note as _an
+    _an("Tizimga kirdi (barmoq izi / Face ID bilan)", cat="login", username=user.username)
     return schemas.LoginResponse(token=token, username=user.username, role=user.role)
 
 
