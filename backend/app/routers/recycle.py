@@ -32,6 +32,15 @@ def _resolve_student_id(db: Session, data: dict):
     return found[0] if len(found) == 1 else None
 
 
+def _rb_name(item) -> str:
+    d = item.data or {}
+    if item.type == "student":
+        return f"o'quvchi {d.get('last_name', '')} {d.get('first_name', '')}".strip()
+    if item.type == "payment":
+        return f"to'lov {d.get('student_name', '')} — {d.get('month', '')} {d.get('year') or ''}, {int(d.get('amount') or 0):,} so'm".replace(",", " ")
+    return f"{item.type} #{item.id}"
+
+
 def _snap_year(data: dict):
     from ..utils import auto_year
     try:
@@ -105,6 +114,8 @@ def restore_item(
     data = item.data
     if current_user.role != "Markaz rahbari" and item.type not in ("student", "payment"):
         raise HTTPException(status_code=403, detail="Buni faqat markaz rahbari tiklay oladi!")
+    from ..audit import note as _an
+    _an(f"Qayta tiklash bo'limidan tikladi: {_rb_name(item)}", cat="set", entity=item.type)
 
     if item.type == "student":
         student = models.Student(
@@ -154,6 +165,8 @@ def delete_permanently(
     item = db.query(models.RecycleBinItem).filter(models.RecycleBinItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Element topilmadi!")
+    from ..audit import note as _an
+    _an(f"Butunlay o'chirdi (qayta tiklab bo'lmaydi): {_rb_name(item)}", cat="set", entity=item.type)
     db.delete(item)
     db.commit()
     return {"ok": True}

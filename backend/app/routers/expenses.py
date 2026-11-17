@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from .. import models, auth
 from ..database import get_db
 from ..utils import UZ_MONTHS, UZ_TZ, now_timestamp_ms, ts_to_uz_datestring
+from ..audit import note as audit_note, money as _m
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
 
@@ -135,6 +136,8 @@ def create_expense(data: ExpenseIn, current_user: models.User = Depends(auth.req
     db.add(e)
     db.commit()
     db.refresh(e)
+    audit_note(f"Xarajat kiritdi: {e.title} — {_m(e.amount)} so'm" + (f" ({e.note})" if e.note else "") + f", sana {ts_to_uz_datestring(e.timestamp)[:10]}",
+               cat="exp", entity="expense", entity_id=e.id)
     return _out(e)
 
 
@@ -151,12 +154,15 @@ def _get_editable(db: Session, eid: int, user: models.User) -> models.Expense:
 def update_expense(eid: int, data: ExpenseIn, current_user: models.User = Depends(auth.require_expense_user),
                    db: Session = Depends(get_db)):
     e = _get_editable(db, eid, current_user)
+    _b = f"{e.title} — {_m(e.amount)}" + (f" ({e.note})" if e.note else "")
     for k, v in _clean(data, current_user, keep_ts=e.timestamp).items():
         setattr(e, k, v)
     e.updated_by = current_user.username
     e.updated_at = now_timestamp_ms()
     db.commit()
     db.refresh(e)
+    _a = f"{e.title} — {_m(e.amount)}" + (f" ({e.note})" if e.note else "")
+    audit_note(f"Xarajatni tahrirladi: {_b} → {_a}" if _a != _b else f"Xarajatni tahrirladi: {_a}", cat="exp", entity="expense", entity_id=e.id)
     return _out(e)
 
 
@@ -166,6 +172,7 @@ def delete_expense(eid: int, current_user: models.User = Depends(auth.require_ex
     e = _get_editable(db, eid, current_user)
     e.deleted_at = now_timestamp_ms()
     e.deleted_by = current_user.username
+    audit_note(f"Xarajatni o'chirdi: {e.title} — {_m(e.amount)} so'm", cat="exp", entity="expense", entity_id=e.id)
     db.commit()
     return {"ok": True}
 
@@ -178,6 +185,7 @@ def restore_expense(eid: int, current_user: models.User = Depends(auth.require_r
         raise HTTPException(status_code=404, detail="O'chirilgan xarajat topilmadi!")
     e.deleted_at = None
     e.deleted_by = None
+    audit_note(f"O'chirilgan xarajatni tikladi: {e.title} — {_m(e.amount)} so'm", cat="exp", entity="expense", entity_id=e.id)
     db.commit()
     db.refresh(e)
     return _out(e)

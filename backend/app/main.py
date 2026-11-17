@@ -27,6 +27,10 @@ from .routers import attendance as attendance_router
 from .routers import school_attendance as school_att_router
 from .routers import chat as chat_router
 from .routers import ai as ai_router   # v13.14: ovozli yordamchi (Gemini)
+from .routers import audit as audit_router   # v13.15: oxirgi amallar
+from .routers import weather as weather_router   # v13.21: kunga moslash (ob-havo)
+from .routers import cash as cash_router   # v13.25: bugungi tushum, "to'lovni oldim"
+from .routers import dev as dev_router   # v13.26: DASTURCHI (yashirin) — SMS hisobini to'ldirish
 
 app = FastAPI(
     title="O'quv Markaz Boshqaruv Tizimi API",
@@ -45,6 +49,9 @@ origins = [o.strip() for o in cors_origins.split(",")] if cors_origins != "*" el
 # v8.7: API javoblarini siqib yuborish (telefon internetida 5-8 marta tezroq)
 app.add_middleware(GZipMiddleware, minimum_size=800)
 # v8.8: xavfsizlik (< > taqiqi, sarlavhalar)
+# v13.15: oxirgi amallar jurnali (har bir o'zgarish yoziladi)
+from .audit import AuditMiddleware  # noqa: E402
+app.add_middleware(AuditMiddleware)
 from .security import SecurityMiddleware  # noqa: E402
 app.add_middleware(SecurityMiddleware)
 
@@ -77,6 +84,10 @@ app.include_router(attendance_router.router)
 app.include_router(school_att_router.router)
 app.include_router(chat_router.router)
 app.include_router(ai_router.router)
+app.include_router(audit_router.router)
+app.include_router(weather_router.router)
+app.include_router(cash_router.router)
+app.include_router(dev_router.router)
 
 
 @app.on_event("startup")
@@ -137,6 +148,8 @@ def _run_light_migrations():
         "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS can_expenses BOOLEAN NOT NULL DEFAULT FALSE",
         # v13.13: bitta login — rahbar ochib bergan menyular (ruxsatlar)
         "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS perms JSON",
+        # v13.15: oxirgi amallar — rahbar qaysigacha ko'rgan (qizil belgi uchun)
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS audit_seen_id INTEGER",
         "UPDATE students SET archive_kind = 'left' WHERE archived_at IS NOT NULL AND archive_kind IS NULL",
         # v8.6: o'quvchining qo'shimcha telefon raqami
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS phone2 VARCHAR(32)",
@@ -147,6 +160,11 @@ def _run_light_migrations():
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS returned_at BIGINT",
         # v12.6: maktab yo'qlamasi — rahbar belgilagan kelish vaqti
         "ALTER TABLE settings ADD COLUMN IF NOT EXISTS att_deadline VARCHAR(5)",
+        # v13.17: yo'qlama — tahrirlangan belgisi
+        "ALTER TABLE school_attendance ADD COLUMN IF NOT EXISTS edited_at BIGINT",
+        "ALTER TABLE school_attendance ADD COLUMN IF NOT EXISTS edited_by VARCHAR(64)",
+        "ALTER TABLE school_attendance ADD COLUMN IF NOT EXISTS orig_status VARCHAR(16)",
+        "ALTER TABLE school_attendance ADD COLUMN IF NOT EXISTS orig_time VARCHAR(5)",
         # v8.9: SMS (Eskiz.uz) sozlamalari
         "ALTER TABLE settings ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE settings ADD COLUMN IF NOT EXISTS sms_to_parent BOOLEAN NOT NULL DEFAULT TRUE",
@@ -160,6 +178,13 @@ def _run_light_migrations():
         "UPDATE settings SET sms_template_rahbar = $t$Yangi to'lov: {ism} {familiya}, {summa} so'm, {oy} oyi. {sana} {vaqt}. OLMOS XATAMOV maktabi$t$ WHERE sms_template_rahbar = $o$To'lov qabul qilindi: {ism} {familiya}, {fan}/{sinf}, {summa} so'm, {oy} oyi. Sana: {sana} {vaqt}$o$",
         "ALTER TABLE sms_logs ADD COLUMN IF NOT EXISTS batch_id INTEGER",
         "ALTER TABLE sms_logs ADD COLUMN IF NOT EXISTS student_id INTEGER",
+        # v13.26: DASTURCHI — SMS hisobini to'ldirish sozlamalari
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS topup_min INTEGER",
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS topup_fee INTEGER",
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS topup_card VARCHAR(40)",
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS topup_card_name VARCHAR(80)",
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS topup_telegram VARCHAR(64)",
+        "ALTER TABLE settings ADD COLUMN IF NOT EXISTS feature_flags JSONB",
     ]
     with engine.begin() as conn:
         for stmt in statements:

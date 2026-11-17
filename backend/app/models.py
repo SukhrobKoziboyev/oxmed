@@ -21,6 +21,7 @@ class User(Base):
     # v12.8: rahbar xodimlar parolini ko'ra olishi uchun — server kaliti bilan shifrlangan nusxa (AES-GCM)
     password_enc = Column(Text, nullable=True)
     last_seen = Column(BigInteger, nullable=True)   # v13.0: chat — "onlayn" / "oxirgi marta"
+    audit_seen_id = Column(Integer, nullable=True)   # v13.15: rahbar oxirgi amallarni qaysigacha ko'rgan
     avatar_data = Column(Text, nullable=True)       # v13.3: profil rasmi (kichik JPEG, data URL)
     avatar_v = Column(BigInteger, nullable=True)    # v13.3: rasm versiyasi (kesh uchun)
 
@@ -47,6 +48,13 @@ class Settings(Base):
     sms_template_reminder = Column(Text, nullable=True)
     sms_template_overdue = Column(Text, nullable=True)
     sms_template_announce = Column(Text, nullable=True)
+    # v13.26: DASTURCHI — SMS hisobini to'ldirish sozlamalari (faqat dasturchi o'zgartiradi)
+    topup_min = Column(Integer, nullable=True)            # eng kam to'lov (standart 182000)
+    topup_fee = Column(Integer, nullable=True)            # Eskiz xizmat haqi (standart 82000)
+    topup_card = Column(String(40), nullable=True)        # karta raqami (dasturchi kartasi)
+    topup_card_name = Column(String(80), nullable=True)   # karta egasi ismi
+    topup_telegram = Column(String(64), nullable=True)    # chekni yuborish uchun Telegram username
+    feature_flags = Column(JSON, nullable=True)           # v13.26+: menyu bloklash/ochish (keyingi bosqich)
 
 
 class RahbarPhone(Base):
@@ -499,6 +507,26 @@ class SchoolAttendance(Base):
     reason = Column(String(200), nullable=True)
     marked_by = Column(String(64), nullable=True)
     marked_at = Column(BigInteger, nullable=True)
+    # v13.17: tahrirlangan bo'lsa — kim, qachon va avval qanday edi
+    edited_at = Column(BigInteger, nullable=True)
+    edited_by = Column(String(64), nullable=True)
+    orig_status = Column(String(16), nullable=True)
+    orig_time = Column(String(5), nullable=True)
+
+
+class CashHandover(Base):
+    """v13.25: rahbar "Bugungi to'lovni oldim" tasdig'i — faqat belgi (kassa/ulush/balansga ta'sir qilmaydi).
+    upto_id gacha bo'lgan bugungi to'lovlar topshirilgan; bugungi tushum shundan keyingilaridan hisoblanadi."""
+    __tablename__ = "cash_handovers"
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(BigInteger, nullable=False, index=True)
+    by_user = Column(String(64), nullable=False)
+    upto_id = Column(Integer, nullable=False)
+    total = Column(BigInteger, nullable=False, default=0)
+    naxt = Column(BigInteger, nullable=False, default=0)
+    click = Column(BigInteger, nullable=False, default=0)
+    terminal = Column(BigInteger, nullable=False, default=0)
+    count = Column(Integer, nullable=False, default=0)
 
 
 # ============================================================ v13.0: CHAT (Telegram uslubida)
@@ -548,3 +576,47 @@ class ChatReaction(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     emoji = Column(String(16), nullable=False)
     created_at = Column(BigInteger, nullable=False)
+
+
+class ActivityLog(Base):
+    """v13.15: OXIRGI AMALLAR — tizimdagi har bir o'zgarish (kim, nima, qachon). 30 kun saqlanadi. Faqat rahbar ko'radi."""
+    __tablename__ = "activity_log"
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(BigInteger, nullable=False, index=True)          # ms
+    username = Column(String(64), nullable=True, index=True)
+    who = Column(String(200), nullable=True)                     # "Rahbar" / "Admin" / "Vali (Matematika o'qituvchisi)"
+    role = Column(String(60), nullable=True)
+    cat = Column(String(20), nullable=False, default="other", index=True)   # pay|stu|exp|sal|staff|login|set|sms|att|other
+    action = Column(String(80), nullable=False)                  # "PUT /api/payments/#"
+    title = Column(String(500), nullable=False)
+    details = Column(JSON, nullable=True)
+    entity = Column(String(30), nullable=True)
+    entity_id = Column(Integer, nullable=True)
+    ip = Column(String(64), nullable=True)
+    ua = Column(String(80), nullable=True)
+    status = Column(Integer, nullable=True)
+
+
+
+class SmsTopup(Base):
+    """v13.26: DASTURCHI — SMS hisobini to'ldirish.
+
+    Rahbar dasturchining kartasiga to'laydi (masalan 182 000 so'm). Shundan
+    {fee} (82 000) — dasturchining xizmat haqi, {to_eskiz} (100 000) — Eskiz
+    SMS hisobiga tushadigan pul. Dasturchi sahifasida "kutilmoqda" bo'lib
+    turadi; dasturchi pulni olib, Eskiz'ni to'ldirgach "done" qiladi.
+
+    MUHIM: bu OXMED kassasi/hisob-kitobiga MUTLAQO ta'sir qilmaydi — alohida.
+    """
+    __tablename__ = "sms_topups"
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(BigInteger, nullable=False, index=True)   # yaratilgan vaqt (ms)
+    amount = Column(Integer, nullable=False)              # rahbar to'lagan jami (masalan 182000)
+    to_eskiz = Column(Integer, nullable=False)           # Eskiz hisobiga tushadigan (100000)
+    fee = Column(Integer, nullable=False)                # dasturchi xizmat haqi (82000)
+    status = Column(String(16), nullable=False, default="pending")  # pending | done | canceled
+    by_user = Column(String(64), nullable=True)          # kim to'ladi (rahbar login)
+    by_who = Column(String(120), nullable=True)          # "Rahbar" / ism
+    note = Column(Text, nullable=True)
+    done_at = Column(BigInteger, nullable=True)
+    done_by = Column(String(64), nullable=True)          # dasturchi

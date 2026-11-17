@@ -17,6 +17,7 @@ from .. import models, schemas, auth
 from ..database import get_db
 from ..utils import now_uz_datestring, now_timestamp_ms, current_uz_month_name, ts_to_uz_datestring, UZ_MONTHS, now_uz
 from .. import ledger
+from ..audit import note as audit_note, money as _m
 from .teacher_self import my_students, teacher_payments
 
 router = APIRouter(prefix="/api/salary", tags=["salary"])
@@ -242,6 +243,9 @@ def create_payout(
     db.add(payout)
     db.commit()
     db.refresh(payout)
+    _what = "Pul qaytardi (markazga)" if payload.kind == ledger.KIND_RETURN else ("Oylik berdi" if ptype == "oylik" else "Avans berdi" if ptype == "avans" else "Oylik / avans berdi")
+    audit_note(f"{_what}: {teacher.name} — {_m(payout.amount)} so'm" + (f" ({month} oyi uchun)" if month and payload.kind != ledger.KIND_RETURN else "")
+               + (f", izoh: {payout.note}" if getattr(payout, "note", None) else ""), cat="sal", entity="payout", entity_id=payout.id)
     out = schemas.PayoutOut.from_orm(payout)
     # v11.16: xodimga SMS — "... siz Noyabr oyi uchun 500 000 so'm avans oldingiz"
     if ptype:
@@ -266,6 +270,8 @@ def delete_payout(
     payout = db.query(models.TeacherPayout).filter(models.TeacherPayout.id == payout_id).first()
     if not payout:
         raise HTTPException(status_code=404, detail="Yozuv topilmadi!")
+    audit_note(f"Oylik/avans yozuvini o'chirdi: {payout.teacher_name} — {_m(payout.amount)} so'm ({payout.date_str}) — summa kassaga qaytdi",
+               cat="sal", entity="payout", entity_id=payout.id)
     db.delete(payout)
     db.commit()
     return {"ok": True}

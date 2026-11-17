@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from .. import models, schemas, auth
 from ..database import get_db
 from ..utils import now_uz_datestring, now_timestamp_ms, parse_uz_datetime, UZ_MONTHS, auto_year
+from ..audit import note as audit_note, money as _m
 
 PAY_METHODS = ("naxt", "click", "terminal")   # v13.9: naqd, Click, terminal (plastik karta)
 
@@ -20,6 +21,18 @@ def _check_year(month: str, year):
 
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
+
+
+_PM = {"naxt": "naqd", "click": "Click", "terminal": "terminal"}
+
+
+def _alloc_txt(p: models.Payment) -> str:
+    return ", ".join(f"{a.teacher_name}: {_m(a.amount)}" for a in (p.allocations or []) if a.amount) or "ulushsiz"
+
+
+def _pay_snap(p: models.Payment) -> dict:
+    return {"O'quvchi": p.student_name, "Oy": f"{p.month} {p.year or ''}".strip(), "Summa": _m(p.amount),
+            "Usul": _PM.get(p.method or "naxt", p.method), "Ulushlar": _alloc_txt(p), "Sana": p.date_str}
 
 
 def _payment_to_out(p: models.Payment) -> schemas.PaymentOut:
@@ -213,6 +226,9 @@ def create_payment(
 
     db.commit()
     db.refresh(payment)
+    audit_note(f"To'lov kiritdi: {payment.student_name} — {payment.month} {payment.year}, {_m(payment.amount)} so'm ({_PM.get(payment.method, payment.method)})"
+               + (f", qarz qoldi {_m(payload.debt)}" if payload.debt else ""), cat="pay", entity="payment", entity_id=payment.id,
+               details=_pay_snap(payment))
 
     # v8.9: SMS (Eskiz.uz) — javob qaytgandan keyin orqada yuboriladi; xato bo'lsa to'lovga ta'sir qilmaydi
     from .sms import send_payment_sms
@@ -240,6 +256,7 @@ def edit_payment(
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="To'lov miqdorini to'g'ri kiriting!")
     is_rahbar = current_user.role == "Markaz rahbari"
+    _before = _pay_snap(payment)   # v13.15: oxirgi amallar — nima o'zgargani
 
     if payload.allocations is not None:
         # v7.9: ulushlar qo'lda tahrirlandi - eski ulushlar to'liq almashtiriladi.
@@ -319,6 +336,11 @@ def edit_payment(
         set_student_debt(db, st, payment.month, int(payload.debt), current_user.username, year=payment.year)
     db.commit()
     db.refresh(payment)
+    _after = _pay_snap(payment)
+    _chg = [f"{k}: {_before[k]} → {_after[k]}" for k in _before if k != "O'quvchi" and _before[k] != _after[k]]
+    audit_note(f"To'lovni tahrirladi: {payment.student_name} — " + ("; ".join(_chg) if _chg else "o'zgarishsiz saqlandi")
+               + (f"; qarz → {_m(payload.debt)}" if payload.debt is not None else ""),
+               cat="pay", entity="payment", entity_id=payment.id, details={"Oldin": _before, "Keyin": _after})
     return _payment_to_out(payment)
 
 
@@ -333,6 +355,8 @@ def delete_payment(
         raise HTTPException(status_code=404, detail="To'lov topilmadi!")
 
     snapshot = _payment_to_out(payment).dict()
+    audit_note(f"To'lovni o'chirdi: {payment.student_name} — {payment.month} {payment.year or ''}, {_m(payment.amount)} so'm (Qayta tiklash bo'limiga tushdi)",
+               cat="pay", entity="payment", entity_id=payment.id, details=_pay_snap(payment))
     db.add(models.RecycleBinItem(
         type="payment",
         data=snapshot,

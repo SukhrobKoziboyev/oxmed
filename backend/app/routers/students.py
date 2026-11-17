@@ -8,8 +8,20 @@ from ..database import get_db
 from ..utils import format_group_label, now_timestamp_ms, utc_naive_to_uz_string
 from ..student_links import find_duplicates, canon, phone9, duplicate_pairs, student_teachers, who_label
 from ..utils import ts_to_uz_datestring
+from ..audit import note as audit_note, money as _m
 
 router = APIRouter(prefix="/api/students", tags=["students"])
+
+
+def _stu_where(s: models.Student) -> str:
+    if s.type == "school":
+        return f"maktab, {s.class_name or ''}".strip(", ")
+    return ", ".join(x for x in ("repetitor", s.subject_name, s.teacher_name, s.group_label) if x)
+
+
+def _stu_snap(s: models.Student) -> dict:
+    return {"Ism": s.first_name, "Familiya": s.last_name, "Telefon": s.phone, "Qo'shimcha telefon": s.phone2 or "",
+            "Turi": "Maktab" if s.type == "school" else "Repetitor", "Sinf / fan": _stu_where(s)}
 
 
 def _student_to_out(s: models.Student) -> schemas.StudentOut:
@@ -112,6 +124,8 @@ def create_student(
             db.add(student)
             db.commit()
             db.refresh(student)
+            audit_note(f"O'quvchi qo'shdi: {student.last_name} {student.first_name} ({_stu_where(student)}), tel {student.phone}",
+                       cat="stu", entity="student", entity_id=student.id, details=_stu_snap(student))
             return _student_to_out(student)
         teacher = db.query(models.Teacher).filter(models.Teacher.id == payload.teacher_id).first()
         if not teacher:
@@ -130,6 +144,8 @@ def create_student(
     db.add(student)
     db.commit()
     db.refresh(student)
+    audit_note(f"O'quvchi qo'shdi: {student.last_name} {student.first_name} ({_stu_where(student)}), tel {student.phone}",
+               cat="stu", entity="student", entity_id=student.id, details=_stu_snap(student))
     return _student_to_out(student)
 
 
@@ -154,6 +170,7 @@ def edit_student(
         raise HTTPException(status_code=400, detail="Ism va familiyani kiriting!")
     if len("".join(ch for ch in phone if ch.isdigit())) < 9:
         raise HTTPException(status_code=400, detail="Telefon raqamini to'g'ri kiriting!")
+    _before = _stu_snap(student)
 
     # v11.8: tahrirlab boshqa o'quvchi bilan bir xil qilib qo'yib bo'lmaydi (o'xshash bo'lsa — avval so'raymiz)
     changed = (canon(first), canon(last), phone9(phone)) != (canon(student.first_name), canon(student.last_name), phone9(student.phone))
@@ -179,6 +196,10 @@ def edit_student(
 
     db.commit()
     db.refresh(student)
+    _after = _stu_snap(student)
+    _chg = [f"{k}: {_before[k] or '—'} → {_after[k] or '—'}" for k in _before if _before[k] != _after[k]]
+    audit_note(f"O'quvchi ma'lumotini tahrirladi: {student.last_name} {student.first_name} — " + ("; ".join(_chg) if _chg else "o'zgarishsiz"),
+               cat="stu", entity="student", entity_id=student.id, details={"Oldin": _before, "Keyin": _after})
     return _student_to_out(student)
 
 
@@ -231,6 +252,8 @@ def archive_student(student_id: int, payload: ArchiveIn, current_user: models.Us
     st.archived_at, st.archived_by, st.archive_reason, st.archive_kind = now, current_user.username, reason, kind
     db.add(models.StudentArchiveLog(student_id=st.id, action=("graduate" if kind == "graduated" else "archive"), at=now,
                                     by=current_user.username, reason=reason, teachers=snap))
+    audit_note((f"O'quvchini \"Bitirganlar\"ga o'tkazdi: " if kind == "graduated" else "O'quvchini arxivga o'tkazdi (markazdan ketdi): ")
+               + f"{st.last_name} {st.first_name}" + (f" — sabab: {reason}" if reason else ""), cat="stu", entity="student", entity_id=st.id)
     db.commit()
     return {"ok": True, "archived_at": ts_to_uz_datestring(now)}
 
@@ -252,6 +275,7 @@ def restore_student(student_id: int, current_user: models.User = Depends(auth.re
         st.teacher_name = st.subject_name = st.group_label = None
     db.query(models.StudentTeacher).filter(models.StudentTeacher.student_id == st.id).delete(synchronize_session=False)
     db.add(models.StudentArchiveLog(student_id=st.id, action="restore", at=now, by=current_user.username))
+    audit_note(f"O'quvchini arxivdan qaytardi: {st.last_name} {st.first_name}", cat="stu", entity="student", entity_id=st.id)
     db.commit()
     return {"ok": True, "returned_at": ts_to_uz_datestring(now)}
 
@@ -397,6 +421,8 @@ def merge_student(
     if not dst.phone2 and phone9(src.phone) and phone9(src.phone) != phone9(dst.phone):
         dst.phone2 = src.phone
     db.query(models.SmsLog).filter(models.SmsLog.student_id == src.id).update({"student_id": dst.id}, synchronize_session=False)
+    audit_note(f"Ikki o'quvchini birlashtirdi: {src.last_name} {src.first_name} → {dst.last_name} {dst.first_name} ({moved_pay} ta to'lov o'tdi)",
+               cat="stu", entity="student", entity_id=dst.id)
     db.flush()
     db.delete(src)
     db.commit()
@@ -415,6 +441,9 @@ def delete_student(
 
     full_name = f"{student.first_name} {student.last_name}"
     related_payments = db.query(models.Payment).filter(models.Payment.student_name == full_name).all()
+    audit_note(f"O'quvchini o'chirdi: {student.last_name} {student.first_name} ({_stu_where(student)})"
+               + (f" va uning {len(related_payments)} ta to'lovi ({_m(sum(int(p.amount) for p in related_payments))} so'm)" if related_payments else "")
+               + " — Qayta tiklash bo'limiga tushdi", cat="stu", entity="student", entity_id=student.id, details=_stu_snap(student))
 
     # Recycle bin'ga saqlash
     student_snapshot = _student_to_out(student).dict()
