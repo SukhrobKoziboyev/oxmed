@@ -130,7 +130,7 @@ ROUTES = [
     ("PUT", r"^/api/bt-columns/\d+/cells/\d+$", "pay", "Umumiy jadval katagini o'zgartirdi"),
 ]
 _ROUTES = [(m, re.compile(rx), c, t) for m, rx, c, t in ROUTES]
-SKIP = re.compile(r"^/api/(chat|push|ai|health|audit|webauthn/(register|login)/options|teacher/dashboard|teacher/ledger)")
+SKIP = re.compile(r"^/api/(chat|push|ai|dev|health|audit|webauthn/(register|login)/options|teacher/dashboard|teacher/ledger)")
 SENSITIVE_GET = re.compile(r"^/api/(auth/staff-credentials|backup)$")
 
 

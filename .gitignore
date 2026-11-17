@@ -20,3 +20,6 @@ __pycache__/
 *.tar.gz
 node_modules/
 *.zip
+
+# Mac zaxira nusxalari
+_backup_*/
